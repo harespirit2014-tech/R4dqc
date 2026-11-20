@@ -19,7 +19,6 @@ jobs:
 
       - name: Unpack Android project
         run: |
-          test -f OmniStudioFX-cloud-build.zip
           unzip -q OmniStudioFX-cloud-build.zip -d "$RUNNER_TEMP/source"
           test -d "$RUNNER_TEMP/source/OmniStudioFX/app"
 
@@ -29,44 +28,24 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-                  - name: Configure Android SDK
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-      - name: Install Android SDK packages
+      - name: Install SDK packages
         run: |
-          sdkmanager --install "platforms;android-36-ext1" "build-tools;36.0.0" "platform-tools"
-          yes | sdkmanager --licenses
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager --install "platforms;android-36-ext1" "build-tools;36.0.0" "platform-tools"
-          yes | sdkmanager --licenses
-        run: |
-          echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
-          echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
-      - name: Install Android SDK packages
-        run: |
-          sdkmanager --install "platforms;android-36-ext1" "build-tools;36.0.0" "platform-tools"
+          sdkmanager --install "platforms;android-36-ext1" "build-tools;36.0.0"
           yes | sdkmanager --licenses
 
-      - name: Set up Gradle 9.3.1
+      - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.3.1'
 
-      - name: Build debug APK
+      - name: Build APK
         working-directory: ${{ runner.temp }}/source/OmniStudioFX
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
+        run: gradle --no-daemon :app:assembleDebug
 
-      - name: Verify APK exists
-        shell: bash
-        working-directory: ${{ runner.temp }}/source/OmniStudioFX
-        run: test -s app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Upload installable APK
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: OmniStudioFX-debug-apk
