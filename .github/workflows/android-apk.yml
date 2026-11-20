@@ -47,33 +47,38 @@ jobs:
       - name: Locate project
         id: locate
         run: |
-          if [ -f "$RUNNER_TEMP/source/gradlew" ]; then
-            echo "dir=$RUNNER_TEMP/source" >> "$GITHUB_OUTPUT"
-          elif [ -f "$RUNNER_TEMP/source/OmniStudioFX/gradlew" ]; then
-            echo "dir=$RUNNER_TEMP/source/OmniStudioFX" >> "$GITHUB_OUTPUT"
-          else
-            project_dir=$(find "$RUNNER_TEMP/source" -type f -name gradlew -printf '%h\n' -quit)
-            if [ -n "$project_dir" ]; then
-              echo "dir=$project_dir" >> "$GITHUB_OUTPUT"
-            else
-              echo "No Gradle wrapper was found in the extracted archive"
-              find "$RUNNER_TEMP/source" -maxdepth 4 -type f | sort
-              exit 1
-            fi
+          project_dir=$(find "$RUNNER_TEMP/source" -type f \( -name settings.gradle -o -name settings.gradle.kts \) -printf '%h\n' -quit)
+          if [ -z "$project_dir" ]; then
+            echo "No Gradle settings file found in the extracted archive"
+            find "$RUNNER_TEMP/source" -maxdepth 5 -type f | sort
+            exit 1
           fi
-
-      - name: Make Gradle executable
-        working-directory: ${{ steps.locate.outputs.dir }}
-        run: chmod +x ./gradlew
+          echo "dir=$project_dir" >> "$GITHUB_OUTPUT"
+          echo "Found Gradle project at $project_dir"
+          ls -la "$project_dir"
 
       - name: Build APK
         working-directory: ${{ steps.locate.outputs.dir }}
-        run: ./gradlew --no-daemon assembleDebug
+        run: |
+          if [ -f ./gradlew ]; then
+            chmod +x ./gradlew
+            ./gradlew --no-daemon assembleDebug
+          else
+            gradle --no-daemon assembleDebug
+          fi
+
+      - name: Collect APK
+        working-directory: ${{ steps.locate.outputs.dir }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/apk"
+          find . -type f -path '*/build/outputs/apk/*/*.apk' -exec cp '{}' "$RUNNER_TEMP/apk/" \;
+          test -n "$(find "$RUNNER_TEMP/apk" -type f -name '*.apk' -print -quit)"
+          ls -lh "$RUNNER_TEMP/apk"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: OmniStudioFX-debug-apk
-          path: ${{ steps.locate.outputs.dir }}/app/build/outputs/apk/debug/*.apk
+          path: ${{ runner.temp }}/apk/*.apk
           if-no-files-found: error
           retention-days: 14
