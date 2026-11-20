@@ -39,6 +39,10 @@ jobs:
         run: |
           sdkmanager --install "platforms;android-36-ext1" "build-tools;36.0.0" "platform-tools"
           yes | sdkmanager --licenses
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager --install "platforms;android-36-ext1" "build-tools;36.0.0" "platform-tools"
+          yes | sdkmanager --licenses
         run: |
           echo "ANDROID_HOME=$ANDROID_HOME" >> $GITHUB_ENV
           echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
